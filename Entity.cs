@@ -27,3 +27,21 @@ public abstract class Entity : IEntity
     [Column("ModifyDate")]
     public virtual DateTime ModifyDate { get; set; }
 }
+
+public class EntityAudit : Entity
+{
+    [Key]
+    [Required]
+    [Column("AuditId")]
+    public int AuditId { get; set; }
+    [Required]
+    [Column("Operation")]
+    public char Operation { get; set; }
+    [Column("Note")]
+    public string Note { get; set; }
+    [Required]
+    [Column("AuditDate")]
+    public DateTime AuditDate { get; set; }
+
+    public override int Id => AuditId;
+}
