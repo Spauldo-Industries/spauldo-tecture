@@ -4,7 +4,16 @@
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>spauldo_tecture</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
+
+    <PackageId>spauldo_techture</PackageId>
+    <Version>2.1.2</Version>
+    <Authors>Jared Spauldng</Authors>
+    <Company>SpauldoIndustries</Company>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
+  </ItemGroup>
 
 </Project>
