@@ -10,15 +10,13 @@ public interface ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>
     Task<List<TDto>> ToListAsync();
 }
 
-public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(
-    MapperFactory mapperFactory,
-    RepoFactory repoFactory
-) : LogicCrudYonBuilder<TEntity, TModel, TDto, TAudit, ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>>(mapperFactory, repoFactory), 
-    ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>
-        where TEntity : class
-        where TModel  : class
-        where TDto    : class
-        where TAudit  : class
+public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory mapperFactory, RepoFactory repoFactory) 
+: LogicCrudYonBuilder<TEntity, TModel, TDto, TAudit, ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>>(mapperFactory, repoFactory)
+, ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>
+    where TEntity : class
+    where TModel  : class
+    where TDto    : class
+    where TAudit  : class
 {
     public async Task<TDto> FirstOrDefaultAsync()
     {
@@ -35,26 +33,26 @@ public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(
     private async Task<TEntity> FetchEntityWithAllRelations()
     {
         var repo = await RepoBuilder.GetRepo();
-        return await repo.Get().Where(Predicate).WithAll()
-            .ById(Id ?? default) ?? await repo.Get().Where(Predicate).WithAll().FirstOrDefaultAsync();
+        return await repo.GetBuilder().Where(Predicate).WithAll()
+            .ById(Id ?? default) ?? await repo.GetBuilder().Where(Predicate).WithAll().FirstOrDefaultAsync();
     }
 
     private async Task<List<TEntity>> FetchEntitiesWithAllRelations()
     {
         var repo = await RepoBuilder.GetRepo();
-        return await repo.Get().Where(Predicate).WithAll().ToListAsync();
+        return await repo.GetBuilder().Where(Predicate).WithAll().ToListAsync();
     }
 
     private async Task<TEntity> FetchEntityWithSpecificRelations()
     {
         var repo = await RepoBuilder.GetRepo();
-        return await repo.Get().Where(Predicate).With(Include)
-            .ById(Id ?? default) ?? await repo.Get().Where(Predicate).With(Include).FirstOrDefaultAsync();
+        return await repo.GetBuilder().Where(Predicate).With(Include)
+            .ById(Id ?? default) ?? await repo.GetBuilder().Where(Predicate).With(Include).FirstOrDefaultAsync();
     }
 
     private async Task<List<TEntity>> FetchEntitiesWithSpecificRelations()
     {
         var repo = await RepoBuilder.GetRepo();
-        return await repo.Get().Where(Predicate).With(Include).ToListAsync();
+        return await repo.GetBuilder().Where(Predicate).With(Include).ToListAsync();
     }
 }

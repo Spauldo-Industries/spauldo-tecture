@@ -8,7 +8,7 @@ public interface ILogicCrudYon<TDto, TModel, TEntity, TAudit> : ILogicHashId
     where TEntity : class
     where TAudit  : class
 {
-    ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> BuildGet();
+    ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> GetBuilder();
     Task<string> GetAsync(TDto dto);
     Task<string> SaveAsync(TModel model);
     // Shorthand for querying for entity by id with no related entities
@@ -17,12 +17,16 @@ public interface ILogicCrudYon<TDto, TModel, TEntity, TAudit> : ILogicHashId
     Task<TDto> GetAsync(int id);
     // Shorthand for querying all with no related entities
     Task<List<TDto>> GetAll();
+    ILogicCrudYonDeleteBuilder<TEntity, TModel, TDto, TAudit> DeleteBuilder();
+    // Shorthand 
     Task DeleteAsync(string id);
+    // Shorthand
     Task DeleteAsync(int id);
-    Task DeleteAsync(Expression<Func<TEntity, bool>> filter);
+    // SHorthand
     Task<bool> ExistsAsync(string id);
+    // Shorthand
     Task<bool> ExistsAsync(int id);
-    Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> filter);
+    ILogicCrudYonExistsBuilder<TEntity, TModel, TDto, TAudit> ExistsBuilder();
 }
 
 public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId, ILogicCrudYon<TDto, TModel, TEntity, TAudit>
@@ -57,7 +61,7 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
         GetMapper = async () => await _mapperFactory.GetMapper<TEntity, TModel, TDto, TAudit>();
     }
 
-    public virtual ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> BuildGet()
+    public virtual ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> GetBuilder()
     {
         return new LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(_mapperFactory, _repoFactory);
     }
@@ -113,18 +117,22 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
     
     public virtual async Task<TDto> GetAsync(int id)
     {
-        return await BuildGet().ById(id).FirstOrDefaultAsync();
+        return await GetBuilder().ById(id).FirstOrDefaultAsync();
     }
 
     public virtual async Task<List<TDto>> GetAll()
     {
-        return await BuildGet().ToListAsync();
+        return await GetBuilder().ToListAsync();
+    }
+
+    public virtual ILogicCrudYonDeleteBuilder<TEntity, TModel, TDto, TAudit> DeleteBuilder()
+    {
+        return new LogicCrudYonDeleteBuilder<TEntity, TModel, TDto, TAudit>(_mapperFactory, _repoFactory);
     }
 
     public virtual async Task DeleteAsync(int id)
     {
-        IRepoEntityFramework<TEntity> repo = await GetRepo();
-        await repo.Delete(id);
+        await DeleteBuilder().ById(id).DeleteAsync();
     }
     
     public virtual async Task DeleteAsync(string id)
@@ -132,27 +140,18 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
         await DeleteAsync(_hashids.Decode(id).FirstOrDefault());
     }
 
-    public virtual async Task DeleteAsync(Expression<Func<TEntity, bool>> filter)
+    public virtual ILogicCrudYonExistsBuilder<TEntity, TModel, TDto, TAudit> ExistsBuilder()
     {
-        IRepoEntityFramework<TEntity> repo = await GetRepo();
-        await repo.DeleteFiltered(filter);
+        return new LogicCrudYonExistsBuilder<TEntity, TModel, TDto, TAudit>(_mapperFactory, _repoFactory);
     }
     
     public virtual async Task<bool> ExistsAsync(int id)
     {
-        IRepoEntityFramework<TEntity> repo = await GetRepo();
-        return await repo.Exists(id);
+        return await ExistsBuilder().ById(id).ExistsAsync();
     }
     
     public virtual async Task<bool> ExistsAsync(string id)
     {
         return await ExistsAsync(_hashids.Decode(id).FirstOrDefault());
-    }
-
-    public virtual async Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> filter)
-    {
-        IRepoEntityFramework<TEntity> repo = await GetRepo();
-
-        return await repo.Exists(filter);
     }
 }

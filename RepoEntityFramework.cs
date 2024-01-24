@@ -10,6 +10,13 @@ public interface IRepoEntityFramework<TEntity>
     where TEntity : class
 {
     /// <summary>
+    /// Retrieves a filtered range of entities from the repository based on a filter expression.
+    /// </summary>
+    /// <param name="filter">The filter expression to apply.</param>
+    /// <returns>A filtered list of entities.</returns>
+    RepoEntityFrameworkGetBuilder<TEntity> GetBuilder();
+
+    /// <summary>
     /// Inserts a single entity into the repository.
     /// </summary>
     /// <param name="entity">The entity to insert.</param>
@@ -38,32 +45,8 @@ public interface IRepoEntityFramework<TEntity>
     /// </summary>
     /// <param name="filter">The filter expression to apply.</param>
     /// <returns>A filtered list of entities.</returns>
-    RepoEntityFrameworkBuilder<TEntity> Get();
-
-    /// <summary>
-    /// Deletes an entity from the repository based on its ID.
-    /// </summary>
-    /// <param name="id">The ID of the entity to delete.</param>
-    Task Delete(int id);
-
-    /// <summary>
-    /// Deletes one or more entities from the repository based on a filter expression.
-    /// </summary>
-    /// <param name="filter">The filter expression to apply.</param>
-    Task DeleteFiltered(Expression<Func<TEntity, bool>> filter);
-
-    /// <summary>
-    /// Checks if an entity with the specified ID exists in the repository.
-    /// </summary>
-    /// <param name="id">The ID of the entity to check.</param>
-    /// <returns>True if the entity exists; otherwise, false.</returns>
-    Task<bool> Exists(int id);
-
-    /// <summary>
-    /// Checks if an entity with the exists in the repository based on a filter expression.
-    /// </summary>
-    /// <param name="filter">The filter expression to apply.</param>
-    Task<bool> Exists(Expression<Func<TEntity, bool>> filter);
+    RepoEntityFrameworkDeleteBuilder<TEntity> DeleteBuilder();
+    RepoEntityFrameworkExistsBuilder<TEntity> ExistsBuilder();
 }
 
 public abstract class RepoEntityFramework<TEntity>(
@@ -73,7 +56,13 @@ public abstract class RepoEntityFramework<TEntity>(
     where TEntity : class
 {
     private readonly DbContext _dbContext = dbContext;
-    protected readonly Func<IQueryable<TEntity>, IQueryable<TEntity>> AllRelatedEntities = allRelatedEntities;
+    private readonly Func<IQueryable<TEntity>, IQueryable<TEntity>> _allRelatedEntities = allRelatedEntities;
+
+    public virtual RepoEntityFrameworkGetBuilder<TEntity> GetBuilder()
+    {       
+        IQueryable<TEntity> query = _dbContext.Set<TEntity>().AsQueryable();
+        return new RepoEntityFrameworkGetBuilder<TEntity>(_dbContext, query, _allRelatedEntities);
+    }
 
     public virtual async Task Insert(TEntity entity)
     {
@@ -107,46 +96,15 @@ public abstract class RepoEntityFramework<TEntity>(
         await _dbContext.SaveChangesAsync();
     }
 
-    public virtual RepoEntityFrameworkBuilder<TEntity> Get()
+    public virtual RepoEntityFrameworkDeleteBuilder<TEntity> DeleteBuilder()
     {       
         IQueryable<TEntity> query = _dbContext.Set<TEntity>().AsQueryable();
-        return new RepoEntityFrameworkBuilder<TEntity>(_dbContext, query, maxInclude: AllRelatedEntities);
+        return new RepoEntityFrameworkDeleteBuilder<TEntity>(_dbContext, query, _allRelatedEntities);
     }
 
-    public virtual async Task Delete(int id)
+    public virtual RepoEntityFrameworkExistsBuilder<TEntity> ExistsBuilder()
     {
-        var entity = await _dbContext.Set<TEntity>().FindAsync(id);
-        if (entity != null)
-        {
-            _dbContext.Set<TEntity>().Remove(entity);
-            await _dbContext.SaveChangesAsync();
-        }
-    }
-
-    public async Task DeleteFiltered(Expression<Func<TEntity, bool>> filter)
-    {
-        var entities = await _dbContext.Set<TEntity>()
-            .Where(filter)
-            .ToListAsync()
-            .ConfigureAwait(false);
-        if (entities.Count > 0)
-        {
-            _dbContext.Set<TEntity>().RemoveRange(entities);
-            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-        }
-    }
-
-    public virtual async Task<bool> Exists(int id)
-    {
-        return await _dbContext.Set<TEntity>().AnyAsync(e => EF.Property<int>(e, _dbContext.Model.FindEntityType(typeof(TEntity)).FindPrimaryKey().Properties[0].Name) == id);
-    }
-
-    public async Task<bool> Exists(Expression<Func<TEntity, bool>> filter)
-    {
-        var entities = await _dbContext.Set<TEntity>()
-            .Where(filter)
-            .ToListAsync()
-            .ConfigureAwait(false);
-        return entities.Count > 0;
+        IQueryable<TEntity> query = _dbContext.Set<TEntity>().AsQueryable();
+        return new RepoEntityFrameworkExistsBuilder<TEntity>(_dbContext, query, _allRelatedEntities);
     }
 }

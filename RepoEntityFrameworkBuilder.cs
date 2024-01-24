@@ -1,88 +1,72 @@
 using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore;
 
 namespace spauldo_techture;
-public class RepoEntityFrameworkBuilder<TEntity>(
-    DbContext dbContext,
-    IQueryable<TEntity> query,
-    Func<IQueryable<TEntity>, IQueryable<TEntity>> maxInclude,
-    Func<IQueryable<TEntity>, IQueryable<TEntity>> include = null,
-    Expression<Func<TEntity, bool>> filter = null)
+public interface IRepoEntityFrameworkBuilder<TEntity, TChild>
+    where TEntity : class
+    where TChild  : class
+{
+    TChild Where(Expression<Func<TEntity, bool>> predicate);
+    TChild With(Func<IQueryable<TEntity>, IQueryable<TEntity>> include);
+    TChild WithAll();
+    IQueryable<TEntity> GetQuery();
+}
+
+public abstract class RepoEntityFrameworkBuilder<TEntity, TChild>(IQueryable<TEntity> query, Func<IQueryable<TEntity>, IQueryable<TEntity>> maxRelations = null)
+: IRepoEntityFrameworkBuilder<TEntity, TChild>
+    where TEntity : class
+    where TChild  : class
 {
     private readonly IQueryable<TEntity> _query = query;
-    private readonly Func<IQueryable<TEntity>, IQueryable<TEntity>> _maxInclude = maxInclude;
-    private readonly Func<IQueryable<TEntity>, IQueryable<TEntity>> _include = include;
-    private readonly Expression<Func<TEntity, bool>> _filter = filter;
-    private readonly DbContext _dbContext = dbContext;
+    private readonly Func<IQueryable<TEntity>, IQueryable<TEntity>> _maxRelations = maxRelations;
+    private Expression<Func<TEntity, bool>> _predicate = null;
+    private Func<IQueryable<TEntity>, IQueryable<TEntity>> _include = null;
+    protected bool WithAllRelationsFlg { get; private set; } = false;
 
-    public RepoEntityFrameworkBuilder<TEntity> With(Func<IQueryable<TEntity>, IQueryable<TEntity>> include)
+    public virtual TChild Where(Expression<Func<TEntity, bool>> predicate)
     {
-        return new RepoEntityFrameworkBuilder<TEntity>(_dbContext, _query, _maxInclude, include, _filter);
+        _predicate = CombinePredicates(_predicate, predicate);
+        return this as TChild;
     }
 
-    public RepoEntityFrameworkBuilder<TEntity> WithAll()
+    public virtual TChild With(Func<IQueryable<TEntity>, IQueryable<TEntity>> include)
     {
-        return new RepoEntityFrameworkBuilder<TEntity>(_dbContext, _query, _maxInclude, _maxInclude, filter: _filter);
+        _include = include;
+        return this as TChild;
     }
 
-    public RepoEntityFrameworkBuilder<TEntity> Where(Expression<Func<TEntity, bool>> filter)
+    public virtual TChild WithAll()
     {
-        return new RepoEntityFrameworkBuilder<TEntity>(_dbContext, _query, _maxInclude, _include, CombineFilters(_filter, filter));
+        _include = _maxRelations;
+        return this as TChild;
     }
 
-    public async Task<TEntity> ById(int id)
+    public virtual IQueryable<TEntity> GetQuery()
     {
         IQueryable<TEntity> query = _query;
 
-        if (_filter != null)
-            query = query.Where(_filter);
+        if (_predicate != null)
+            query = query.Where(_predicate);
 
         if (_include != null)
             query = _include(query);
 
-        return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, _dbContext.Model.FindEntityType(typeof(TEntity)).FindPrimaryKey().Properties[0].Name) == id);
+        return query;
     }
 
-    public async Task<TEntity> FirstOrDefaultAsync()
+    private static Expression<Func<TEntity, bool>> CombinePredicates(
+        Expression<Func<TEntity, bool>> existingPredicate,
+        Expression<Func<TEntity, bool>> newPredicate)
     {
-        IQueryable<TEntity> query = _query;
-
-        if (_filter != null)
-            query = query.Where(_filter);
-
-        if (_include != null)
-            query = _include(query);
-
-        return await query.FirstOrDefaultAsync().ConfigureAwait(false);
-    }
-
-    public async Task<List<TEntity>> ToListAsync()
-    {
-        IQueryable<TEntity> query = _query;
-
-        if (_filter != null)
-            query = query.Where(_filter);
-
-        if (_include != null)
-            query = _include(query);
-
-        return await query.ToListAsync().ConfigureAwait(false);
-    }
-
-    private static Expression<Func<TEntity, bool>> CombineFilters(
-        Expression<Func<TEntity, bool>> existingFilter,
-        Expression<Func<TEntity, bool>> newFilter)
-    {
-        if (existingFilter == null)
+        if (existingPredicate == null)
         {
-            return newFilter;
+            return newPredicate;
         }
         else
         {
             var parameter = Expression.Parameter(typeof(TEntity));
             var combined = Expression.AndAlso(
-                new ReplaceParameterVisitor(existingFilter.Parameters[0], parameter).Visit(existingFilter.Body),
-                new ReplaceParameterVisitor(newFilter.Parameters[0], parameter).Visit(newFilter.Body)
+                new ReplaceParameterVisitor(existingPredicate.Parameters[0], parameter).Visit(existingPredicate.Body),
+                new ReplaceParameterVisitor(newPredicate.Parameters[0], parameter).Visit(newPredicate.Body)
             );
             return Expression.Lambda<Func<TEntity, bool>>(combined, parameter);
         }
