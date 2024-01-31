@@ -7,7 +7,8 @@ public interface ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>
     where TAudit  : class
 {
     Task<TDto> FirstOrDefaultAsync();
-    Task<List<TDto>> ToListAsync();
+    Task<Page<TDto>> ToListAsync();
+    LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> WithPageSetting(int pageNumber = 1, int pageSize = 1000);
 }
 
 public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory mapperFactory, RepoFactory repoFactory) 
@@ -18,16 +19,26 @@ public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory
     where TDto    : class
     where TAudit  : class
 {
+    private Page<TDto> Page { get; set; } = new Page<TDto>();
+
     public async Task<TDto> FirstOrDefaultAsync()
     {
         TEntity entity = WithAllRelationsFlg ? await FetchEntityWithAllRelations() : await FetchEntityWithSpecificRelations();
         return await MapToDto(entity);
     }
 
-    public async Task<List<TDto>> ToListAsync()
+    public async Task<Page<TDto>> ToListAsync()
     {
-        List<TEntity> entities = WithAllRelationsFlg ? await FetchEntitiesWithAllRelations() : await FetchEntitiesWithSpecificRelations();
-        return await MapToDto(entities);
+        Page<TEntity> page = WithAllRelationsFlg ? await FetchEntitiesWithAllRelations() : await FetchEntitiesWithSpecificRelations();
+        Page.Values = await MapToDto(page.Values);
+        return Page;
+    }
+
+    public LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> WithPageSetting(int pageNumber = 1, int pageSize = 1000)
+    {
+        Page.PageSize = pageSize;
+        Page.PageNumber = pageNumber;
+        return this;
     }
 
     private async Task<TEntity> FetchEntityWithAllRelations()
@@ -37,10 +48,13 @@ public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory
             .ById(Id ?? default) ?? await repo.GetBuilder().Where(Predicate).WithAll().FirstOrDefaultAsync();
     }
 
-    private async Task<List<TEntity>> FetchEntitiesWithAllRelations()
+    private async Task<Page<TEntity>> FetchEntitiesWithAllRelations()
     {
         var repo = await RepoBuilder.GetRepo();
-        return await repo.GetBuilder().Where(Predicate).WithAll().ToListAsync();
+        return await repo.GetBuilder()
+            .WithPageSetting(Page.PageNumber, Page.PageSize)
+            .Where(Predicate).WithAll()
+            .ToListAsync();
     }
 
     private async Task<TEntity> FetchEntityWithSpecificRelations()
@@ -50,9 +64,12 @@ public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory
             .ById(Id ?? default) ?? await repo.GetBuilder().Where(Predicate).With(Include).FirstOrDefaultAsync();
     }
 
-    private async Task<List<TEntity>> FetchEntitiesWithSpecificRelations()
+    private async Task<Page<TEntity>> FetchEntitiesWithSpecificRelations()
     {
         var repo = await RepoBuilder.GetRepo();
-        return await repo.GetBuilder().Where(Predicate).With(Include).ToListAsync();
+        return await repo.GetBuilder()
+            .WithPageSetting(Page.PageNumber, Page.PageSize)
+            .Where(Predicate).With(Include)
+            .ToListAsync();
     }
 }

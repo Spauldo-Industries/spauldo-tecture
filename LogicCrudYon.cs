@@ -16,7 +16,7 @@ public interface ILogicCrudYon<TDto, TModel, TEntity, TAudit> : ILogicHashId
     // Shorthand for querying for entity by id with no related entities
     Task<TDto> GetAsync(int id);
     // Shorthand for querying all with no related entities
-    Task<List<TDto>> GetAll();
+    Task<Page<TDto>> GetAll();
     ILogicCrudYonDeleteBuilder<TEntity, TModel, TDto, TAudit> DeleteBuilder();
     // Shorthand 
     Task DeleteAsync(string id);
@@ -120,7 +120,7 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
         return await GetBuilder().ById(id).FirstOrDefaultAsync();
     }
 
-    public virtual async Task<List<TDto>> GetAll()
+    public virtual async Task<Page<TDto>> GetAll()
     {
         return await GetBuilder().ToListAsync();
     }

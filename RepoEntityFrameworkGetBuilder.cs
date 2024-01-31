@@ -7,7 +7,7 @@ public interface IRepoEntityFrameworkGetBuilder<TEntity>
     where TEntity : class
 {
     Task<TEntity> FirstOrDefaultAsync();
-    Task<List<TEntity>> ToListAsync();
+    Task<Page<TEntity>> ToListAsync();
     Task<TEntity> ById(int id);
 }
 
@@ -17,6 +17,7 @@ public class RepoEntityFrameworkGetBuilder<TEntity>(DbContext dbContext, IQuerya
     where TEntity : class
 {
     private readonly DbContext _dbContext = dbContext;
+    private Page<TEntity> Page { get; set; } = new Page<TEntity>();
 
     public async Task<TEntity> ById(int id)
     {
@@ -30,9 +31,19 @@ public class RepoEntityFrameworkGetBuilder<TEntity>(DbContext dbContext, IQuerya
         return await query.FirstOrDefaultAsync().ConfigureAwait(false);
     }
 
-    public async Task<List<TEntity>> ToListAsync()
+    public async Task<Page<TEntity>> ToListAsync()
     {
         IQueryable<TEntity> query = GetQuery();
-        return await query.ToListAsync().ConfigureAwait(false);
+        Page.Values = await query.Skip((Page.PageNumber - 1) * Page.PageSize)
+            .Take(Page.PageSize)
+            .ToListAsync().ConfigureAwait(false);
+        return Page;
+    }
+
+    public RepoEntityFrameworkGetBuilder<TEntity> WithPageSetting(int pageNumber = 1, int pageSize = 1000)
+    {
+        Page.PageSize = pageSize;
+        Page.PageNumber = pageNumber;
+        return this;
     }
 }
