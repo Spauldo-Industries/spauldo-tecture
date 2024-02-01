@@ -44,8 +44,9 @@ public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory
     private async Task<TEntity> FetchEntityWithAllRelations()
     {
         var repo = await RepoBuilder.GetRepo();
-        return await repo.GetBuilder().Where(Predicate).WithAll()
-            .ById(Id ?? default) ?? await repo.GetBuilder().Where(Predicate).WithAll().FirstOrDefaultAsync();
+        if (Id.HasValue)
+            return await repo.GetBuilder().Where(Predicate).WithAll().ById(Id.GetValueOrDefault());
+        return await repo.GetBuilder().Where(Predicate).WithAll().FirstOrDefaultAsync();
     }
 
     private async Task<Page<TEntity>> FetchEntitiesWithAllRelations()
@@ -60,8 +61,9 @@ public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory
     private async Task<TEntity> FetchEntityWithSpecificRelations()
     {
         var repo = await RepoBuilder.GetRepo();
-        return await repo.GetBuilder().Where(Predicate).With(Include)
-            .ById(Id ?? default) ?? await repo.GetBuilder().Where(Predicate).With(Include).FirstOrDefaultAsync();
+        if (Id.HasValue)
+            return await repo.GetBuilder().Where(Predicate).With(Include).ById(Id.GetValueOrDefault());
+        return await repo.GetBuilder().Where(Predicate).With(Include).FirstOrDefaultAsync();
     }
 
     private async Task<Page<TEntity>> FetchEntitiesWithSpecificRelations()
