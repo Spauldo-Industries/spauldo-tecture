@@ -9,7 +9,6 @@ public interface ILogicCrudYon<TDto, TModel, TEntity, TAudit> : ILogicHashId
     where TAudit  : class
 {
     ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> GetBuilder();
-    Task<string> GetAsync(TDto dto);
     Task<string> SaveAsync(TDto dto);
     Task<string> SaveAsync(TModel model);
     // Shorthand for querying for entity by id with no related entities
@@ -65,11 +64,6 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
     public virtual ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> GetBuilder()
     {
         return new LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(_mapperFactory, _repoFactory);
-    }
-
-    public virtual async Task<string> GetAsync(TDto dto)
-    {
-        return await SaveInternal(dto);
     }
 
     public virtual async Task<string> SaveAsync(TDto dto)

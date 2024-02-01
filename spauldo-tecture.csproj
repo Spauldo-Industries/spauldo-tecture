@@ -7,7 +7,7 @@
     <Nullable>disable</Nullable>
 
     <PackageId>spauldo_techture</PackageId>
-    <Version>2.2.4</Version>
+    <Version>2.2.5</Version>
     <Authors>Jared Spauldng</Authors>
     <Company>SpauldoIndustries</Company>
   </PropertyGroup>
