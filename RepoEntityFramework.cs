@@ -81,6 +81,7 @@ public abstract class RepoEntityFramework<TEntity>(
 
     public virtual async Task Update(TEntity entity)
     {
+        _dbContext.Entry(entity).State = EntityState.Detached;
         _dbContext.Entry(entity).State = EntityState.Modified;
         await _dbContext.SaveChangesAsync();
     }
@@ -91,7 +92,10 @@ public abstract class RepoEntityFramework<TEntity>(
             return;
         
         foreach (var entity in entities)
+        {
+            _dbContext.Entry(entity).State = EntityState.Detached;
             _dbContext.Entry(entity).State = EntityState.Modified;
+        }
 
         await _dbContext.SaveChangesAsync();
     }
