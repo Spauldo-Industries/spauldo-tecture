@@ -81,14 +81,7 @@ public abstract class RepoEntityFramework<TEntity>(
 
     public virtual async Task Update(TEntity entity)
     {
-        var entry = _dbContext.ChangeTracker.Entries<TEntity>().FirstOrDefault(e => e.Entity == entity);
-
-        if (entry != null && entry.State == EntityState.Detached)
-        {
-            // The entity is not being tracked
-            _dbContext.Update(entity);
-        }
-        
+        _dbContext.Entry(entity).State = EntityState.Modified;
         await _dbContext.SaveChangesAsync();
     }
 
@@ -98,15 +91,7 @@ public abstract class RepoEntityFramework<TEntity>(
             return;
         
         foreach (var entity in entities)
-        {
-            var entry = _dbContext.ChangeTracker.Entries<TEntity>().FirstOrDefault(e => e.Entity == entity);
-
-            if (entry != null && entry.State == EntityState.Detached)
-            {
-                // The entity is not being tracked
-                _dbContext.Update(entity);
-            }
-        }
+            _dbContext.Entry(entity).State = EntityState.Modified;
 
         await _dbContext.SaveChangesAsync();
     }

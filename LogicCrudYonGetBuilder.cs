@@ -7,6 +7,7 @@ public interface ILogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>
     where TAudit  : class
 {
     Task<TDto> FirstOrDefaultAsync();
+    Task<TDto> LastOrDefaultAsync();
     Task<Page<TDto>> ToListAsync();
     LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit> WithPageSetting(int pageNumber = 1, int pageSize = 1000);
 }
@@ -23,7 +24,13 @@ public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory
 
     public async Task<TDto> FirstOrDefaultAsync()
     {
-        TEntity entity = WithAllRelationsFlg ? await FetchEntityWithAllRelations() : await FetchEntityWithSpecificRelations();
+        TEntity entity = WithAllRelationsFlg ? await FetchEntityWithAllRelations() : await FetchFirstEntityWithSpecificRelations();
+        return await MapToDto(entity);
+    }
+
+    public async Task<TDto> LastOrDefaultAsync()
+    {
+        TEntity entity = WithAllRelationsFlg ? await FetchEntityWithAllRelations() : await FetchLastEntityWithSpecificRelations();
         return await MapToDto(entity);
     }
 
@@ -58,12 +65,20 @@ public class LogicCrudYonGetBuilder<TEntity, TModel, TDto, TAudit>(MapperFactory
             .ToListAsync();
     }
 
-    private async Task<TEntity> FetchEntityWithSpecificRelations()
+    private async Task<TEntity> FetchFirstEntityWithSpecificRelations()
     {
         var repo = await RepoBuilder.GetRepo();
         if (Id.HasValue)
             return await repo.GetBuilder().Where(Predicate).With(Include).ById(Id.GetValueOrDefault());
         return await repo.GetBuilder().Where(Predicate).With(Include).FirstOrDefaultAsync();
+    }
+
+    private async Task<TEntity> FetchLastEntityWithSpecificRelations()
+    {
+        var repo = await RepoBuilder.GetRepo();
+        if (Id.HasValue)
+            return await repo.GetBuilder().Where(Predicate).With(Include).ById(Id.GetValueOrDefault());
+        return await repo.GetBuilder().Where(Predicate).With(Include).LastOrDefaultAsync();
     }
 
     private async Task<Page<TEntity>> FetchEntitiesWithSpecificRelations()

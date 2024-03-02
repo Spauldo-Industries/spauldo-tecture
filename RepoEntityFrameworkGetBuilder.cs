@@ -7,6 +7,7 @@ public interface IRepoEntityFrameworkGetBuilder<TEntity>
     where TEntity : class
 {
     Task<TEntity> FirstOrDefaultAsync();
+    Task<TEntity> LastOrDefaultAsync();
     Task<Page<TEntity>> ToListAsync();
     Task<TEntity> ById(int id);
 }
@@ -29,6 +30,12 @@ public class RepoEntityFrameworkGetBuilder<TEntity>(DbContext dbContext, IQuerya
     {
         IQueryable<TEntity> query = GetQuery();
         return await query.FirstOrDefaultAsync().ConfigureAwait(false);
+    }
+
+    public async Task<TEntity> LastOrDefaultAsync()
+    {
+        IQueryable<TEntity> query = GetQuery();
+        return await query.LastOrDefaultAsync().ConfigureAwait(false);
     }
 
     public async Task<Page<TEntity>> ToListAsync()
