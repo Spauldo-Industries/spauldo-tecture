@@ -79,11 +79,9 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
     private async Task<string> SaveInternal(object source)
     {
         var mapper = await GetMapper();
-        var auditor = await GetAuditor();
         var mappedEntity = await mapper.Map<TEntity>(source);
         
         await InsertOrUpdate(mappedEntity);
-        await auditor.AuditInsert(mappedEntity, $"Saved {source.GetType().Name}.");
 
         // Map the entity back to DTO
         var mappedDto = await mapper.Map<TDto>(mappedEntity);
@@ -96,6 +94,7 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
     private async Task InsertOrUpdate(TEntity mappedEntity)
     {
         var repo = await GetRepo();
+        var auditor = await GetAuditor();
 
         // Extract the ID property value from the mapped entity
         if (!ModelHelper.TryGetIntPropertyValue(mappedEntity, "Id", out int entityId))
@@ -104,10 +103,12 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
         if (entityId == 0)
         {
             await repo.Insert(mappedEntity);
+            await auditor.AuditInsert(mappedEntity, $"Inserted {mappedEntity.GetType().Name}.");
             return;
         }
             
         await repo.Update(mappedEntity);
+        await auditor.AuditUpdate(mappedEntity, $"Updated {mappedEntity.GetType().Name}.");
     }
 
     public virtual async Task<TDto> GetAsync(string id)
@@ -127,7 +128,7 @@ public abstract class LogicCrudYon<TEntity, TModel, TDto, TAudit> : LogicHashId,
 
     public virtual ILogicCrudYonDeleteBuilder<TEntity, TModel, TDto, TAudit> DeleteBuilder()
     {
-        return new LogicCrudYonDeleteBuilder<TEntity, TModel, TDto, TAudit>(_mapperFactory, _repoFactory);
+        return new LogicCrudYonDeleteBuilder<TEntity, TModel, TDto, TAudit>(_mapperFactory, _repoFactory, _auditorFactory);
     }
 
     public virtual async Task DeleteAsync(int id)

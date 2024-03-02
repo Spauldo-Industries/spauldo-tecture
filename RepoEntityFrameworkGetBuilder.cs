@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 
 namespace spauldo_techture;
@@ -28,14 +29,26 @@ public class RepoEntityFrameworkGetBuilder<TEntity>(DbContext dbContext, IQuerya
 
     public async Task<TEntity> FirstOrDefaultAsync()
     {
-        IQueryable<TEntity> query = GetQuery();
-        return await query.FirstOrDefaultAsync().ConfigureAwait(false);
+        var primaryKeyPropertyName = _dbContext.Model.FindEntityType(typeof(TEntity)).FindPrimaryKey().Properties
+        .Select(x => x.Name).FirstOrDefault();
+        Expression<Func<TEntity, object>> orderByExpression = 
+            entity => EF.Property<object>(entity, primaryKeyPropertyName);
+        IQueryable<TEntity> query = GetQuery().OrderBy(orderByExpression);
+        var entity = await query.FirstOrDefaultAsync().ConfigureAwait(false);
+        _dbContext.Entry(entity).State = EntityState.Detached;
+        return entity;
     }
 
     public async Task<TEntity> LastOrDefaultAsync()
     {
-        IQueryable<TEntity> query = GetQuery();
-        return await query.LastOrDefaultAsync().ConfigureAwait(false);
+        var primaryKeyPropertyName = _dbContext.Model.FindEntityType(typeof(TEntity)).FindPrimaryKey().Properties
+        .Select(x => x.Name).FirstOrDefault();
+        Expression<Func<TEntity, object>> orderByExpression = 
+            entity => EF.Property<object>(entity, primaryKeyPropertyName);
+        IQueryable<TEntity> query = GetQuery().OrderByDescending(orderByExpression);
+        var entity = await query.LastOrDefaultAsync().ConfigureAwait(false);
+        _dbContext.Entry(entity).State = EntityState.Detached;
+        return entity;
     }
 
     public async Task<Page<TEntity>> ToListAsync()
